@@ -141,8 +141,7 @@ PROCEDURES = {
 # シート1: AI タスク一覧
 # ========================================================
 def build_sheet_list(wb, tasks):
-    ws = wb.active
-    ws.title = "AI タスク一覧"
+    ws = wb.create_sheet("AI タスク一覧")
     ws.sheet_view.showGridLines = False
     ws.freeze_panes = "A2"
 
@@ -279,6 +278,168 @@ def build_sheet_manual(wb, tasks):
         row += 1  # セクション間の空行
 
 # ========================================================
+# シート0: 要約（表紙）
+# ========================================================
+def build_sheet_summary(wb, tasks):
+    ws = wb.create_sheet("要約", 0)
+    ws.sheet_view.showGridLines = False
+    ws.column_dimensions["A"].width = 22
+    ws.column_dimensions["B"].width = 50
+    ws.column_dimensions["C"].width = 12
+
+    # タイトル
+    tc = ws.cell(row=1, column=1, value="AI タスク 整理レポート")
+    tc.font = Font(bold=True, size=16, color="FFFFFF")
+    tc.fill = header_fill("1F4E79")
+    tc.alignment = Alignment(vertical="center", horizontal="center")
+    tc.border = make_border()
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=3)
+    ws.row_dimensions[1].height = 36
+
+    # サブタイトル
+    sc = ws.cell(row=2, column=1, value="Google Tasks「AI」リストから抽出・分類・手順化")
+    sc.font = Font(size=11, color="2E75B6")
+    sc.alignment = Alignment(vertical="center", horizontal="center")
+    sc.fill = header_fill("EBF3FB")
+    sc.border = make_border()
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=3)
+    ws.row_dimensions[2].height = 22
+
+    row = 4
+
+    # ---- 概要サマリー ----
+    set_section(ws, row, 3, "■ 概要", bg="2E75B6")
+    ws.cell(row=row, column=1).font = Font(bold=True, size=11, color="FFFFFF")
+    row += 1
+
+    summary_items = [
+        ("対象タスクリスト", "Google Tasks「AI」リスト"),
+        ("総タスク数", f"{len(tasks)} 件"),
+        ("分類カテゴリ数", f"{len(CATEGORIES)} カテゴリ"),
+        ("ステータス", "全件「未完了」"),
+        ("目的", "AIツール活用の整理・手順化・実行推進"),
+    ]
+    for label, value in summary_items:
+        lc = ws.cell(row=row, column=1, value=label)
+        lc.font = Font(bold=True, size=10)
+        lc.fill = header_fill("D6E4F0")
+        lc.alignment = Alignment(vertical="center", indent=1)
+        lc.border = make_border()
+
+        vc = ws.cell(row=row, column=2, value=value)
+        vc.font = Font(size=10)
+        vc.alignment = Alignment(vertical="center", indent=1)
+        vc.border = make_border()
+        ws.merge_cells(start_row=row, start_column=2, end_row=row, end_column=3)
+        ws.row_dimensions[row].height = 20
+        row += 1
+
+    row += 1
+
+    # ---- カテゴリ別件数 ----
+    set_section(ws, row, 3, "■ カテゴリ別タスク数", bg="2E75B6")
+    ws.cell(row=row, column=1).font = Font(bold=True, size=11, color="FFFFFF")
+    row += 1
+
+    for i, h in enumerate(["カテゴリ", "主なタスク", "件数"], 1):
+        set_header(ws, row, i, h, bg="2E75B6")
+    row += 1
+
+    cat_descriptions = {
+        "Claude Code系":       "初期設定・コマンド・エージェント・セキュリティ・スキル",
+        "AI活用事例":          "価格比較・週レポート・日タスク・スライド作成",
+        "NotebookLM/Gemini系": "プロンプト保管庫・Gem×LM連携・書籍管理・会議録",
+        "Cowork/ツール系":     "Cowork・Channels・Antigravity・ブラウザ操作・AI Studio",
+        "その他":              "投資関連AIツール調査",
+    }
+
+    for cat, _ in CATEGORIES:
+        cat_tasks = [t for t in tasks if classify(t.get("タスク名", "") or "") == cat]
+        if not cat_tasks:
+            continue
+        bg = CAT_COLORS[cat]
+        hbg = CAT_HEADER_COLORS[cat]
+
+        cc = ws.cell(row=row, column=1, value=cat)
+        cc.font = Font(bold=True, size=10, color="FFFFFF")
+        cc.fill = header_fill(hbg)
+        cc.alignment = Alignment(vertical="center", indent=1)
+        cc.border = make_border()
+
+        dc = ws.cell(row=row, column=2, value=cat_descriptions.get(cat, ""))
+        dc.font = Font(size=10)
+        dc.fill = header_fill(bg)
+        dc.alignment = Alignment(vertical="center", wrap_text=True, indent=1)
+        dc.border = make_border()
+
+        nc = ws.cell(row=row, column=3, value=len(cat_tasks))
+        nc.font = Font(bold=True, size=10)
+        nc.fill = header_fill(bg)
+        nc.alignment = Alignment(vertical="center", horizontal="center")
+        nc.border = make_border()
+        ws.row_dimensions[row].height = 22
+        row += 1
+
+    row += 1
+
+    # ---- 優先取り組み提案 ----
+    set_section(ws, row, 3, "■ 優先取り組み提案", bg="2E75B6")
+    ws.cell(row=row, column=1).font = Font(bold=True, size=11, color="FFFFFF")
+    row += 1
+
+    priorities = [
+        ("1", "Claude Code 初期設定・基盤整備",
+         "code 初期設定 / .claude育てる / セキュリティ設定を先行して完了させ、開発基盤を確立する。"),
+        ("2", "AI活用事例の実装（例1〜5）",
+         "具体的なアウトプットを出すことでAI活用の成果を可視化。週レポート・スライド自動化から着手推奨。"),
+        ("3", "Coworkチーム導入",
+         "導入の注意事項を確認後、Channels設定・メンバー招待を実施。組織全体のAI活用推進につなげる。"),
+        ("4", "NotebookLM プロンプト管理",
+         "プロンプト保管庫を整備し、Gem×LM連携を確立。ナレッジ管理の基盤として活用。"),
+        ("5", "Tasks→スプレッドシート自動化",
+         "Google Tasksのデータをスプシに自動転記するフローを構築し、タスク管理を効率化。"),
+    ]
+
+    for i, h in enumerate(["優先度", "テーマ", "内容・推奨理由"], 1):
+        set_header(ws, row, i, h, bg="1F4E79")
+    row += 1
+
+    for pri, theme, detail in priorities:
+        set_cell(ws, row, 1, pri, bg="EBF3FB", bold=True)
+        set_cell(ws, row, 2, theme, bg="EBF3FB", bold=True)
+        set_cell(ws, row, 3, detail, bg="EBF3FB")
+        ws.row_dimensions[row].height = 36
+        row += 1
+
+    # ---- シート案内 ----
+    row += 1
+    set_section(ws, row, 3, "■ 本ファイルの構成", bg="595959")
+    ws.cell(row=row, column=1).font = Font(bold=True, size=11, color="FFFFFF")
+    row += 1
+
+    sheet_guide = [
+        ("Sheet1: 要約",          "本シート。全体概要・カテゴリ集計・優先取り組み提案"),
+        ("Sheet2: AI タスク一覧", "33件のタスクをカテゴリ色分けで一覧表示"),
+        ("Sheet3: カテゴリ別分類", "5カテゴリに分けてタスクを整理"),
+        ("Sheet4: 手順書",        "カテゴリごとの概要・具体的な作業手順"),
+    ]
+    for sheet_name, desc in sheet_guide:
+        lc = ws.cell(row=row, column=1, value=sheet_name)
+        lc.font = Font(bold=True, size=10)
+        lc.fill = header_fill("D9D9D9")
+        lc.alignment = Alignment(vertical="center", indent=1)
+        lc.border = make_border()
+
+        dc = ws.cell(row=row, column=2, value=desc)
+        dc.font = Font(size=10)
+        dc.alignment = Alignment(vertical="center", indent=1)
+        dc.border = make_border()
+        ws.merge_cells(start_row=row, start_column=2, end_row=row, end_column=3)
+        ws.row_dimensions[row].height = 20
+        row += 1
+
+
+# ========================================================
 # メイン処理
 # ========================================================
 def main():
@@ -290,6 +451,7 @@ def main():
 
     wb = openpyxl.Workbook()
 
+    build_sheet_summary(wb, tasks)
     build_sheet_list(wb, tasks)
     build_sheet_category(wb, tasks)
     build_sheet_manual(wb, tasks)
