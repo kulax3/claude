@@ -31,21 +31,35 @@ class SearchResult:
 
 
 def fts_search(query: str, limit: int = 20) -> list[SearchResult]:
-    """Fast FTS5 full-text search."""
+    """Fast FTS5 full-text search with LIKE fallback for short Japanese queries.
+
+    The trigram tokenizer requires at least 3 characters. For shorter queries
+    we fall back to a LIKE scan on the items table directly.
+    """
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     try:
-        # Escape FTS5 special chars
-        safe_query = query.replace('"', '""')
-        rows = conn.execute("""
-            SELECT i.id, i.source, i.source_id, i.title, i.summary, i.tags, i.categories,
-                   snippet(items_fts, 1, '<b>', '</b>', '...', 20) AS snippet
-            FROM items_fts
-            JOIN items i ON items_fts.rowid = i.id
-            WHERE items_fts MATCH ?
-            ORDER BY rank
-            LIMIT ?
-        """, (safe_query, limit)).fetchall()
+        # Trigram needs 3+ chars. For short queries use LIKE fallback.
+        if len(query.replace(" ", "")) < 3:
+            like_pat = f"%{query}%"
+            rows = conn.execute("""
+                SELECT id, source, source_id, title, summary, tags, categories,
+                       '' AS snippet
+                FROM items
+                WHERE title LIKE ? OR full_text LIKE ? OR summary LIKE ? OR tags LIKE ?
+                LIMIT ?
+            """, (like_pat, like_pat, like_pat, like_pat, limit)).fetchall()
+        else:
+            safe_query = query.replace('"', '""')
+            rows = conn.execute("""
+                SELECT i.id, i.source, i.source_id, i.title, i.summary, i.tags, i.categories,
+                       snippet(items_fts, 1, '<b>', '</b>', '...', 20) AS snippet
+                FROM items_fts
+                JOIN items i ON items_fts.rowid = i.id
+                WHERE items_fts MATCH ?
+                ORDER BY rank
+                LIMIT ?
+            """, (safe_query, limit)).fetchall()
 
         return [
             SearchResult(

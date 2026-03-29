@@ -61,17 +61,15 @@ def init_db() -> None:
                 UNIQUE(source, source_id)
             );
 
-            CREATE TABLE IF NOT EXISTS items_fts (
-                content       TEXT,
-                tokenize      TEXT DEFAULT 'trigram'
-            ) USING fts5(
+            CREATE VIRTUAL TABLE IF NOT EXISTS items_fts USING fts5(
                 title,
                 full_text,
                 summary,
                 tags,
                 content=items,
-                content_rowid=id
-            ) ;
+                content_rowid=id,
+                tokenize='trigram'
+            );
 
             -- Triggers to keep FTS in sync
             CREATE TRIGGER IF NOT EXISTS items_ai AFTER INSERT ON items BEGIN
