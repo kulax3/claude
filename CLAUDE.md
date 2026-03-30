@@ -1,49 +1,53 @@
 # Claude Code 設定
 
-## ファイル同期環境
+## ファイル同期環境 (Windows)
 
-| 用途 | 場所 |
+| 用途 | パス |
 |------|------|
-| 社内共有 | `~/Library/CloudStorage/Box-Box/shared/` |
-| Claude Code 作業 | `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Work/` |
+| 社内共有 | `%USERPROFILE%\Box\shared\` |
+| Claude Code 作業 | `%USERPROFILE%\Apple\iCloud Drive\Obsidian\Work\` |
 | iPhone同期 | iCloud経由で自動（Obsidian Mobile アプリ） |
-
-## ノートの場所
-
-- 作業ノート・メモ: `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Work/`
-- 社内共有ドキュメント: `~/Library/CloudStorage/Box-Box/shared/`
-- 同期スクリプト: `sync_box_obsidian.sh`
 
 ## 同期フロー
 
 ```
 iPhone
   ↕ iCloud (自動)
-Obsidian Vault (Work/)
-  ↕ sync_box_obsidian.sh (30分ごと自動 / 手動可)
-Box Drive (shared/)
-  ↕ Box (自動)
+Obsidian Vault (Work\)  ←  iCloud for Windows
+  ↕ sync_box_obsidian.ps1 (30分ごと自動 / 手動可)
+Box Drive (shared\)
+  ↕ Box Drive (自動)
 社内メンバー
 ```
 
-## よく使うコマンド
+## 前提アプリ
 
-```bash
+| アプリ | 入手先 |
+|--------|--------|
+| Box Drive | https://www.box.com/ja-jp/resources/downloads |
+| iCloud for Windows | Microsoft Store で「iCloud」を検索 |
+| Obsidian | https://obsidian.md |
+
+## よく使うコマンド (PowerShell)
+
+```powershell
 # 今すぐ同期
-bash sync_box_obsidian.sh both
+powershell -File sync_box_obsidian.ps1 -Direction both
 
 # Box → Obsidian のみ
-bash sync_box_obsidian.sh box-to-obs
+powershell -File sync_box_obsidian.ps1 -Direction box-to-obs
 
 # Obsidian → Box のみ
-bash sync_box_obsidian.sh obs-to-box
+powershell -File sync_box_obsidian.ps1 -Direction obs-to-box
 
 # 同期ログを確認
-tail -f ~/Library/Logs/box-obsidian-sync.log
+Get-Content "$env:USERPROFILE\AppData\Local\Logs\box-obsidian-sync.log" -Tail 50
 ```
 
 ## 初回セットアップ
 
-```bash
-bash setup_env.sh
+PowerShell を開いて実行:
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned  # 初回のみ
+.\setup_env.ps1
 ```
