@@ -4,18 +4,15 @@
 
 | 用途 | パス |
 |------|------|
+| Claude Code 作業（メイン） | `%USERPROFILE%\Documents\Obsidian\Work\` |
 | 社内共有 | `%USERPROFILE%\Box\shared\` |
-| Claude Code 作業 | `%USERPROFILE%\Apple\iCloud Drive\Obsidian\Work\` |
-| iPhone同期 | iCloud経由で自動（Obsidian Mobile アプリ） |
 
 ## 同期フロー
 
 ```
-iPhone
-  ↕ iCloud (自動)
-Obsidian Vault (Work\)  ←  iCloud for Windows
+Obsidian vault (ローカル) \ shared \
   ↕ sync_box_obsidian.ps1 (30分ごと自動 / 手動可)
-Box Drive (shared\)
+Box Drive \ shared \
   ↕ Box Drive (自動)
 社内メンバー
 ```
@@ -25,7 +22,6 @@ Box Drive (shared\)
 | アプリ | 入手先 |
 |--------|--------|
 | Box Drive | https://www.box.com/ja-jp/resources/downloads |
-| iCloud for Windows | Microsoft Store で「iCloud」を検索 |
 | Obsidian | https://obsidian.md |
 
 ## よく使うコマンド (PowerShell)

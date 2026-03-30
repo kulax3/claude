@@ -1,5 +1,4 @@
-# Box Drive <-> Obsidian (iCloud) 同期スクリプト (Windows版)
-# 用途: 社内共有(Box) と Claude Code用ノート(Obsidian/iCloud) を同期する
+# Box Drive <-> Obsidian 同期スクリプト (Windows)
 
 param(
     [ValidateSet("box-to-obs", "obs-to-box", "both")]
@@ -7,60 +6,37 @@ param(
 )
 
 # ── 設定 ──────────────────────────────────────────────────────────────────────
-$BoxDir      = if ($env:BOX_DIR)      { $env:BOX_DIR }      else { "$env:USERPROFILE\Box" }
-$ICloudBase  = if ($env:ICLOUD_DIR)   { $env:ICLOUD_DIR }   else { "$env:USERPROFILE\Apple\iCloud Drive" }
-$VaultName   = if ($env:VAULT_NAME)   { $env:VAULT_NAME }   else { "Work" }
-$SharedFolder = if ($env:SHARED_FOLDER) { $env:SHARED_FOLDER } else { "shared" }
+$BoxShared = if ($env:BOX_SHARED) { $env:BOX_SHARED } else { "$env:USERPROFILE\Box\shared" }
+$ObsShared = if ($env:OBS_SHARED) { $env:OBS_SHARED } else { "$env:USERPROFILE\Documents\Obsidian\Work\shared" }
 
-$ObsidianDir = "$ICloudBase\Obsidian\$VaultName"
-$BoxShared   = "$BoxDir\$SharedFolder"
-$ObsShared   = "$ObsidianDir\$SharedFolder"
+$LogFile = "$env:USERPROFILE\AppData\Local\Logs\box-obsidian-sync.log"
 
 # ── ログ ──────────────────────────────────────────────────────────────────────
 function Log { param($msg); Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] $msg" }
 
 # ── チェック ──────────────────────────────────────────────────────────────────
-function Check-Dirs {
-    if (-not (Test-Path $BoxDir)) {
-        Write-Error "Box Drive が見つかりません: $BoxDir`n  → Box Drive アプリをインストール・サインインしてください"
-        exit 1
-    }
-    if (-not (Test-Path $ObsidianDir)) {
-        Write-Error "Obsidian iCloud フォルダが見つかりません: $ObsidianDir`n  → iCloud for Windows をインストールし、Obsidian vault '$VaultName' を作成してください"
-        exit 1
-    }
-    New-Item -ItemType Directory -Force -Path $BoxShared  | Out-Null
-    New-Item -ItemType Directory -Force -Path $ObsShared  | Out-Null
+if (-not (Test-Path (Split-Path $BoxShared))) {
+    Write-Error "Box Drive が見つかりません。Box Drive をインストール・サインインしてください。"
+    exit 1
+}
+if (-not (Test-Path (Split-Path $ObsShared))) {
+    Write-Error "Obsidian vault が見つかりません: $(Split-Path $ObsShared)`nsetup_env.ps1 を先に実行するか、パスを確認してください。"
+    exit 1
 }
 
-# ── 同期 (robocopy) ───────────────────────────────────────────────────────────
-# /MIR  : ミラーリング（削除も反映）
-# /XF   : 除外ファイル
-# /XD   : 除外フォルダ
-# /NP   : 進捗パーセント非表示
-# /LOG+ : ログ追記
-$LogFile = "$env:USERPROFILE\AppData\Local\Logs\box-obsidian-sync.log"
+New-Item -ItemType Directory -Force -Path $BoxShared | Out-Null
+New-Item -ItemType Directory -Force -Path $ObsShared | Out-Null
 New-Item -ItemType Directory -Force -Path (Split-Path $LogFile) | Out-Null
 
-function Sync-BoxToObs {
-    Log "Box -> Obsidian 同期開始"
-    robocopy $BoxShared $ObsShared /MIR /XF "*.tmp" "desktop.ini" /XD ".tmp" /NP /LOG+:$LogFile
-    Log "Box -> Obsidian 同期完了"
+# ── 同期 ──────────────────────────────────────────────────────────────────────
+function Sync($From, $To, $Label) {
+    Log "$Label 同期開始: $From -> $To"
+    robocopy $From $To /MIR /XF "*.tmp" "desktop.ini" /XD ".obsidian" ".tmp" /NP /LOG+:$LogFile
+    Log "$Label 同期完了"
 }
-
-function Sync-ObsToBox {
-    Log "Obsidian -> Box 同期開始"
-    robocopy $ObsShared $BoxShared /MIR /XF "*.tmp" "desktop.ini" /XD ".obsidian" ".tmp" /NP /LOG+:$LogFile
-    Log "Obsidian -> Box 同期完了"
-}
-
-# ── メイン ────────────────────────────────────────────────────────────────────
-Check-Dirs
 
 switch ($Direction) {
-    "box-to-obs" { Sync-BoxToObs }
-    "obs-to-box" { Sync-ObsToBox }
-    "both"       { Sync-BoxToObs; Sync-ObsToBox }
+    "box-to-obs" { Sync $BoxShared $ObsShared "Box -> Obsidian" }
+    "obs-to-box" { Sync $ObsShared $BoxShared "Obsidian -> Box" }
+    "both"       { Sync $BoxShared $ObsShared "Box -> Obsidian"; Sync $ObsShared $BoxShared "Obsidian -> Box" }
 }
-
-Log "完了"
