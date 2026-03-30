@@ -6,8 +6,10 @@ param(
 )
 
 # ── 設定 ──────────────────────────────────────────────────────────────────────
-$BoxShared = if ($env:BOX_SHARED) { $env:BOX_SHARED } else { "$env:USERPROFILE\Box\shared" }
-$ObsShared = if ($env:OBS_SHARED) { $env:OBS_SHARED } else { "$env:USERPROFILE\Documents\Obsidian\Work\shared" }
+$BoxShared    = if ($env:BOX_SHARED)    { $env:BOX_SHARED }    else { "$env:USERPROFILE\Box\shared" }
+$ObsShared    = if ($env:OBS_SHARED)    { $env:OBS_SHARED }    else { "$env:USERPROFILE\Documents\Obsidian\Work\shared" }
+$ScriptsSrc   = if ($env:SCRIPTS_SRC)   { $env:SCRIPTS_SRC }   else { "$env:USERPROFILE\Documents\claude" }
+$ScriptsDest  = if ($env:SCRIPTS_DEST)  { $env:SCRIPTS_DEST }  else { "$env:USERPROFILE\Box\scripts" }
 
 $LogFile = "$env:USERPROFILE\AppData\Local\Logs\box-obsidian-sync.log"
 
@@ -39,4 +41,14 @@ switch ($Direction) {
     "box-to-obs" { Sync $BoxShared $ObsShared "Box -> Obsidian" }
     "obs-to-box" { Sync $ObsShared $BoxShared "Obsidian -> Box" }
     "both"       { Sync $BoxShared $ObsShared "Box -> Obsidian"; Sync $ObsShared $BoxShared "Obsidian -> Box" }
+}
+
+# スクリプト・設定ファイルを Box\scripts\ に自動コピー
+if (Test-Path (Split-Path $ScriptsDest)) {
+    New-Item -ItemType Directory -Force -Path $ScriptsDest | Out-Null
+    robocopy $ScriptsSrc $ScriptsDest /MIR `
+        /XD ".git" ".claude" `
+        /XF "*.xlsx" "*.py" "hello.txt" `
+        /NP /LOG+:$LogFile
+    Log "スクリプト -> Box\scripts\ コピー完了"
 }

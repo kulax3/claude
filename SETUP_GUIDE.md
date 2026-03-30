@@ -62,12 +62,26 @@ Obsidianを開くと左側のパネルにフォルダが表示される。
 
 ## STEP 3｜同期スクリプトを設定・実行する
 
-### 3-1. このリポジトリをPCに取得
+### 3-1. このリポジトリをPCに取得（git clone）
+
+PowerShellを開いて以下を実行:
 
 ```powershell
 cd "$env:USERPROFILE\Documents"
 git clone https://github.com/kulax3/claude.git
 cd claude
+```
+
+**何が起きているか:**
+- `git clone` = GitHubにあるスクリプト一式をPCにダウンロードする
+- 実行後、`Documents\claude\` フォルダが作られ、中にスクリプトが入る
+
+```
+Documents\claude\
+  sync_box_obsidian.ps1   ← 同期スクリプト
+  setup_env.ps1           ← セットアップスクリプト
+  CLAUDE.md               ← Claude Codeへの指示書
+  SETUP_GUIDE.md          ← この手順書
 ```
 
 ### 3-2. 実行ポリシーの設定（初回のみ）
@@ -76,63 +90,116 @@ cd claude
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
+**何が起きているか:**
+Windowsはデフォルトで外部から取得したスクリプトの実行をブロックしている。
+この設定で「自分のユーザーに限りスクリプトを実行可能」にする。
+`Y` を押してEnter。
+
 ### 3-3. セットアップ実行
 
 ```powershell
 .\setup_env.ps1
 ```
 
-これでタスクスケジューラに30分ごとの自動同期が登録される。
+**何が起きているか（内部でやっていること）:**
+1. Box Drive が存在するか確認
+2. Obsidian vault が存在するか確認
+3. `shared\` フォルダを両方に作成
+4. Windowsのタスクスケジューラに「30分ごとに sync_box_obsidian.ps1 を実行」を登録
 
-### 3-4. 手動で今すぐ同期
+### 3-4. タスクスケジューラの登録確認
 
 ```powershell
-powershell -File sync_box_obsidian.ps1 -Direction both
+Get-ScheduledTask -TaskName "BoxObsidianSync" | Select-Object TaskName, State
 ```
 
-### 3-5. 同期確認
+`State: Ready` と表示されれば登録成功。
+
+タスクスケジューラの画面で確認したい場合:
+1. スタートメニューで「タスクスケジューラ」を検索して開く
+2. 左パネル「タスク スケジューラ ライブラリ」をクリック
+3. 一覧に `BoxObsidianSync` があればOK
+
+### 3-5. 手動で今すぐ同期してみる
 
 ```powershell
-# ログを見る
+powershell -File "$env:USERPROFILE\Documents\claude\sync_box_obsidian.ps1" -Direction both
+```
+
+### 3-6. ログで結果を確認
+
+```powershell
 Get-Content "$env:USERPROFILE\AppData\Local\Logs\box-obsidian-sync.log" -Tail 20
 ```
 
----
-
-## STEP 4｜スクリプト・設定をBoxにも共有する
-
-スクリプトや `.claude\` の設定を社内メンバーとBoxで共有したい場合:
-
-### 4-1. Boxに `scripts\` フォルダを作る
-
-```powershell
-New-Item -ItemType Directory -Force "$env:USERPROFILE\Box\scripts"
+正常時はこのような出力が表示される:
 ```
-
-### 4-2. スクリプトをBoxにコピー
-
-```powershell
-$src  = "$env:USERPROFILE\Documents\claude"
-$dest = "$env:USERPROFILE\Box\scripts"
-
-Copy-Item "$src\sync_box_obsidian.ps1" $dest -Force
-Copy-Item "$src\setup_env.ps1"         $dest -Force
-Copy-Item "$src\CLAUDE.md"             $dest -Force
+[2025-01-01 10:00:00] Box -> Obsidian 同期開始: ...
+[2025-01-01 10:00:01] Box -> Obsidian 同期完了
+[2025-01-01 10:00:01] Obsidian -> Box 同期開始: ...
+[2025-01-01 10:00:02] Obsidian -> Box 同期完了
+[2025-01-01 10:00:02] スクリプト -> Box\scripts\ コピー完了
 ```
-
-> **注意:** コピーはあくまで「配布用」。編集はgit側（`Documents\claude\`）で行う。
 
 ---
 
-## STEP 5｜Obsidianのsharedフォルダ → Box同期の確認
+## STEP 4｜スクリプト・設定をBoxに自動共有する
 
-`Documents\Obsidian\Work\shared\` にファイルを置くと、次の同期タイミングで `Box\shared\` にコピーされる。
+**手動コピーは不要。** 同期スクリプト（sync_box_obsidian.ps1）を実行するたびに、スクリプト類が `Box\scripts\` に自動でコピーされる仕組みになっている。
 
 ```
-shared\ に置く → 社内共有される
-notes\  に置く → 自分のPCだけ（同期されない）
-context\ に置く → Claude Codeが参照できる（同期されない）
+Documents\claude\          →（同期のたびに自動コピー）→    Box\scripts\
+  sync_box_obsidian.ps1                                      sync_box_obsidian.ps1
+  setup_env.ps1                                              setup_env.ps1
+  CLAUDE.md                                                  CLAUDE.md
+  SETUP_GUIDE.md                                             SETUP_GUIDE.md
 ```
+
+**社内メンバーがBoxからスクリプトを使う手順:**
+1. `Box\scripts\` フォルダを開く
+2. `setup_env.ps1` を自分のPCの適当な場所にコピー
+3. STEP 3-2〜3-3 と同じ手順でセットアップ
+
+> **編集は必ずgit側（`Documents\claude\`）で行うこと。**
+> Box側のファイルは次の同期で上書きされるため、Box側を直接編集しても消える。
+
+---
+
+## STEP 5｜動作確認：sharedフォルダの同期をテストする
+
+実際にファイルを置いて同期されるか確認する。
+
+### 5-1. テストファイルをObsidianのsharedに置く
+
+```powershell
+# テスト用ファイルを作成
+"テスト" | Out-File "$env:USERPROFILE\Documents\Obsidian\Work\shared\test.md"
+```
+
+またはObsidianアプリで `shared\` フォルダに新規ノートを作っても同じ。
+
+### 5-2. 同期を実行
+
+```powershell
+powershell -File "$env:USERPROFILE\Documents\claude\sync_box_obsidian.ps1" -Direction obs-to-box
+```
+
+### 5-3. Boxに反映されたか確認
+
+```powershell
+Test-Path "$env:USERPROFILE\Box\shared\test.md"
+# True と表示されれば成功
+```
+
+エクスプローラーで `Box\shared\` を開いて `test.md` が存在することを目で確認してもよい。
+
+### 5-4. フォルダ別の動作まとめ
+
+| フォルダ | Boxと同期 | 社内共有 | Claude Code参照 |
+|----------|-----------|----------|-----------------|
+| `shared\` | される | される | できる（パス指定） |
+| `notes\` | されない | されない | できる（パス指定） |
+| `context\` | されない | されない | できる（パス指定） |
 
 ---
 
