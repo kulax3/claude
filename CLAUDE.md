@@ -40,19 +40,18 @@ powershell -File sync_box_obsidian.ps1 -Direction obs-to-box
 Get-Content "$env:USERPROFILE\AppData\Local\Logs\box-obsidian-sync.log" -Tail 50
 ```
 
-## 参照ノート (context/)
+## 参照ノート
 
-Obsidian から Claude Code に渡したいノートを `context\` にコピーして使う。
+Obsidian のノートをそのまま参照する。コピー不要。
 
 ```
-claude/ (このリポジトリ)
-  context\
-    *.md  ← Obsidianからコピーしたノート・思考整理・背景情報
+%USERPROFILE%\Documents\Obsidian\Work\
+  context\       ← 背景・思考整理・判断基準などを置く
+  shared\        ← Box と同期される社内共有フォルダ
 ```
 
-- **Claude Codeへの指示**: タスクの背景や判断基準を `context\` のmdに書いておくと参照される
-- **更新方法**: Obsidianで編集 → 必要なタイミングで手動コピー
-- **gitには含める**: 履歴として残したい場合はコミット、一時的なメモは`.gitignore`に追加
+Claude Code にノートを参照させたいときはパスを伝える:
+> 「`%USERPROFILE%\Documents\Obsidian\Work\context\xxx.md` を読んで」
 
 ## 初回セットアップ
 
