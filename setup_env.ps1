@@ -2,7 +2,7 @@
 # Box Drive と Obsidian (ローカル) の同期環境を構築する
 
 # ── 設定（必要に応じて変更）─────────────────────────────────────────────────
-$ObsVaultPath = "$env:USERPROFILE\Documents\Obsidian\Work"  # Obsidian vault のパス
+$ObsVaultPath = "C:\Users\seizouDesk2\obsidianseizou"  # Obsidian vault のパス
 $BoxShared    = "$env:USERPROFILE\Box\shared"                # Box の共有フォルダ
 
 $ScriptDir  = Split-Path -Parent $MyInvocation.MyCommand.Path

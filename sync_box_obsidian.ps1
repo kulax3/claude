@@ -7,7 +7,7 @@ param(
 
 # ── 設定 ──────────────────────────────────────────────────────────────────────
 $BoxShared    = if ($env:BOX_SHARED)    { $env:BOX_SHARED }    else { "$env:USERPROFILE\Box\shared" }
-$ObsShared    = if ($env:OBS_SHARED)    { $env:OBS_SHARED }    else { "$env:USERPROFILE\Documents\Obsidian\Work\shared" }
+$ObsShared    = if ($env:OBS_SHARED)    { $env:OBS_SHARED }    else { "C:\Users\seizouDesk2\obsidianseizou\shared" }
 $ScriptsSrc   = if ($env:SCRIPTS_SRC)   { $env:SCRIPTS_SRC }   else { "$env:USERPROFILE\Documents\claude" }
 $ScriptsDest  = if ($env:SCRIPTS_DEST)  { $env:SCRIPTS_DEST }  else { "$env:USERPROFILE\Box\scripts" }
 
