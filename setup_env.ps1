@@ -43,4 +43,5 @@ Write-Host "  OK タスク登録完了: $TaskName" -ForegroundColor Green
 
 Write-Host "`n=== 完了 ===" -ForegroundColor Cyan
 Write-Host "手動同期: powershell -File `"$SyncScript`" -Direction both"
-Write-Host "ログ確認: Get-Content `"$env:USERPROFILE\AppData\Local\Logs\box-obsidian-sync.log`" -Tail 50"
+$logPath = "$env:USERPROFILE\AppData\Local\Logs\box-obsidian-sync.log"
+Write-Host "ログ確認: Get-Content $logPath -Tail 50"
