@@ -1,7 +1,7 @@
 # Setup script (Windows)
 # Box Drive + Obsidian sync environment
 
-$ObsVaultPath = "C:\Users\seizouDesk2\obsidianseizou"
+$ObsVaultPath = "C:\Users\seizouDesk2\Documents\claude\claudeseizou"
 $BoxShared    = "C:\Users\seizouDesk2\Box\I-1 Claude\seizou\kawana"
 
 $ScriptDir  = Split-Path -Parent $MyInvocation.MyCommand.Path

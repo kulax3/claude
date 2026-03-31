@@ -5,10 +5,10 @@ param(
     [string]$Direction = "both"
 )
 
-$BoxShared    = if ($env:BOX_SHARED)    { $env:BOX_SHARED }    else { "C:\Users\seizouDesk2\Box\I-1 Claude\seizou\kawana" }
-$ObsShared    = if ($env:OBS_SHARED)    { $env:OBS_SHARED }    else { "C:\Users\seizouDesk2\obsidianseizou\shared" }
-$ScriptsSrc   = if ($env:SCRIPTS_SRC)   { $env:SCRIPTS_SRC }   else { "$env:USERPROFILE\Documents\claude" }
-$ScriptsDest  = if ($env:SCRIPTS_DEST)  { $env:SCRIPTS_DEST }  else { "$env:USERPROFILE\Box\scripts" }
+$BoxShared   = if ($env:BOX_SHARED)   { $env:BOX_SHARED }   else { "C:\Users\seizouDesk2\Box\I-1 Claude\seizou\kawana" }
+$ObsShared   = if ($env:OBS_SHARED)   { $env:OBS_SHARED }   else { "C:\Users\seizouDesk2\Documents\claude\claudeseizou\shared" }
+$ScriptsSrc  = if ($env:SCRIPTS_SRC)  { $env:SCRIPTS_SRC }  else { "C:\Users\seizouDesk2\Documents\claude" }
+$ScriptsDest = if ($env:SCRIPTS_DEST) { $env:SCRIPTS_DEST } else { "$env:USERPROFILE\Box\scripts" }
 
 $LogFile = "$env:USERPROFILE\AppData\Local\Logs\box-obsidian-sync.log"
 
@@ -43,7 +43,7 @@ switch ($Direction) {
 if (Test-Path (Split-Path $ScriptsDest)) {
     New-Item -ItemType Directory -Force -Path $ScriptsDest | Out-Null
     robocopy $ScriptsSrc $ScriptsDest /MIR `
-        /XD ".git" ".claude" `
+        /XD ".git" ".claude" "claudeseizou" `
         /XF "*.xlsx" "*.py" "hello.txt" `
         /NP /LOG+:$LogFile
     Log "Scripts copied to Box\scripts\"
