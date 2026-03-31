@@ -32,7 +32,7 @@ Write-Host "`n【3/3】自動同期の登録 (30分ごと)"
 $TaskName = "BoxObsidianSync"
 $Action   = New-ScheduledTaskAction `
     -Execute "powershell.exe" `
-    -Argument "-NoProfile -NonInteractive -WindowStyle Hidden -File `"$SyncScript`" -Direction both"
+    -Argument "-NoProfile -NonInteractive -WindowStyle Hidden -File '$SyncScript' -Direction both"
 $Trigger  = New-ScheduledTaskTrigger -RepetitionInterval (New-TimeSpan -Minutes 30) -Once -At (Get-Date)
 $Settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 10) -StartWhenAvailable
 
@@ -41,6 +41,7 @@ Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Se
 
 Write-Host "  OK タスク登録完了: $TaskName" -ForegroundColor Green
 
-Write-Host "`n=== 完了 ===" -ForegroundColor Cyan
-Write-Host "手動同期: powershell -File `"$SyncScript`" -Direction both"
-Write-Host "ログ確認: Get-Content `"$env:USERPROFILE\AppData\Local\Logs\box-obsidian-sync.log`" -Tail 50"
+$logPath = "$env:USERPROFILE\AppData\Local\Logs\box-obsidian-sync.log"
+Write-Host "`n=== 完了 ==="  -ForegroundColor Cyan
+Write-Host "手動同期: powershell -File '$SyncScript' -Direction both"
+Write-Host "ログ確認: Get-Content $logPath -Tail 50"
