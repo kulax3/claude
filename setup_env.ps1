@@ -1,7 +1,7 @@
 # Setup script (Windows)
 # Box Drive + Obsidian sync environment
 
-$ObsVaultPath = "C:\Users\seizouDesk2\Documents\claude\claudeseizou"
+$ObsVaultPath = "C:\Users\seizouDesk2\Documents\claude"
 $BoxShared    = "C:\Users\seizouDesk2\Box\I-1 Claude\seizou\kawana"
 
 $ScriptDir  = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -25,9 +25,9 @@ New-Item -ItemType Directory -Force -Path "$ObsVaultPath\shared"  | Out-Null
 New-Item -ItemType Directory -Force -Path "$ObsVaultPath\context" | Out-Null
 New-Item -ItemType Directory -Force -Path $BoxShared              | Out-Null
 New-Item -ItemType Directory -Force -Path (Split-Path $LogFile)   | Out-Null
-Write-Host "  OK Obsidian: $ObsVaultPath\shared"  -ForegroundColor Green
-Write-Host "  OK Obsidian: $ObsVaultPath\context" -ForegroundColor Green
-Write-Host "  OK Box:      $BoxShared"             -ForegroundColor Green
+Write-Host "  OK Obsidian shared : $ObsVaultPath\shared"  -ForegroundColor Green
+Write-Host "  OK Obsidian context: $ObsVaultPath\context" -ForegroundColor Green
+Write-Host "  OK Box             : $BoxShared"             -ForegroundColor Green
 
 # 3. Register Task Scheduler (every 30 min)
 Write-Host "`n[3/3] Registering auto-sync task (every 30 min)"

@@ -6,7 +6,7 @@ param(
 )
 
 $BoxShared   = if ($env:BOX_SHARED)   { $env:BOX_SHARED }   else { "C:\Users\seizouDesk2\Box\I-1 Claude\seizou\kawana" }
-$ObsShared   = if ($env:OBS_SHARED)   { $env:OBS_SHARED }   else { "C:\Users\seizouDesk2\Documents\claude\claudeseizou\shared" }
+$ObsShared   = if ($env:OBS_SHARED)   { $env:OBS_SHARED }   else { "C:\Users\seizouDesk2\Documents\claude\shared" }
 $ScriptsSrc  = if ($env:SCRIPTS_SRC)  { $env:SCRIPTS_SRC }  else { "C:\Users\seizouDesk2\Documents\claude" }
 $ScriptsDest = if ($env:SCRIPTS_DEST) { $env:SCRIPTS_DEST } else { "$env:USERPROFILE\Box\scripts" }
 
@@ -15,7 +15,7 @@ $LogFile = "$env:USERPROFILE\AppData\Local\Logs\box-obsidian-sync.log"
 function Log { param($msg); Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] $msg" }
 
 if (-not (Test-Path (Split-Path $BoxShared))) {
-    Write-Error "Box Drive not found. Please install and sign in to Box Drive."
+    Write-Error "Box Drive not found."
     exit 1
 }
 if (-not (Test-Path (Split-Path $ObsShared))) {
@@ -29,7 +29,7 @@ New-Item -ItemType Directory -Force -Path (Split-Path $LogFile) | Out-Null
 
 function Sync($From, $To, $Label) {
     Log "$Label : $From -> $To"
-    robocopy $From $To /MIR /XF "*.tmp" "desktop.ini" /XD ".obsidian" ".tmp" /NP /LOG+:$LogFile
+    robocopy $From $To /MIR /XF "*.tmp" "desktop.ini" /XD ".obsidian" ".tmp" ".git" /NP /LOG+:$LogFile
     Log "$Label done"
 }
 
@@ -43,7 +43,7 @@ switch ($Direction) {
 if (Test-Path (Split-Path $ScriptsDest)) {
     New-Item -ItemType Directory -Force -Path $ScriptsDest | Out-Null
     robocopy $ScriptsSrc $ScriptsDest /MIR `
-        /XD ".git" ".claude" "claudeseizou" `
+        /XD ".git" ".claude" "shared" "context" ".obsidian" `
         /XF "*.xlsx" "*.py" "hello.txt" `
         /NP /LOG+:$LogFile
     Log "Scripts copied to Box\scripts\"

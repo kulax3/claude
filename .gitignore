@@ -1,2 +1,4 @@
-# Obsidian vault (data files - not for git)
-claudeseizou/
+# Obsidian data folders (not for git)
+shared/
+context/
+.obsidian/
