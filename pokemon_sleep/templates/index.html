@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ポケモンスリープ アドバイザー</title>
+  <style>
+    :root {
+      --bg: #0f0f1a;
+      --surface: #1a1a2e;
+      --surface2: #16213e;
+      --accent: #4f8ef7;
+      --accent2: #a78bfa;
+      --success: #34d399;
+      --warn: #fbbf24;
+      --danger: #f87171;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --border: #2d3748;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+      min-height: 100vh;
+    }
+    header {
+      background: linear-gradient(135deg, #1a1a3e, #0f0f2e);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header h1 {
+      font-size: 1.3rem;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    header .moon { font-size: 1.8rem; }
+    nav {
+      display: flex;
+      gap: 0;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+    }
+    nav button {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 14px 20px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    nav button:hover { color: var(--text); }
+    nav button.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .tab-content { display: none; padding: 24px; max-width: 1200px; margin: 0 auto; }
+    .tab-content.active { display: block; }
+
+    /* ===== CARDS ===== */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card h2 { font-size: 1.1rem; margin-bottom: 16px; color: var(--accent2); }
+
+    /* ===== POKEMON BOX ===== */
+    .box-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .pokemon-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      position: relative;
+      transition: border-color 0.2s;
+      cursor: pointer;
+    }
+    .pokemon-card:hover { border-color: var(--accent); }
+    .pokemon-card.selected { border-color: var(--success); background: rgba(52,211,153,0.08); }
+    .pokemon-card .name { font-weight: 600; font-size: 1rem; margin-bottom: 6px; }
+    .pokemon-card .meta { font-size: 0.78rem; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 4px; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+    .badge-berry { background: rgba(251,191,36,0.2); color: var(--warn); }
+    .badge-ingredient { background: rgba(52,211,153,0.2); color: var(--success); }
+    .badge-skill { background: rgba(167,139,250,0.2); color: var(--accent2); }
+    .badge-lvl { background: rgba(79,142,247,0.2); color: var(--accent); }
+    .pokemon-card .skill-name { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+    .pokemon-card .subskills { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+    .delete-btn {
+      position: absolute;
+      top: 8px; right: 8px;
+      background: none;
+      border: none;
+      color: var(--danger);
+      cursor: pointer;
+      opacity: 0;
+      font-size: 0.9rem;
+      transition: opacity 0.2s;
+    }
+    .pokemon-card:hover .delete-btn { opacity: 1; }
+
+    /* ===== UPLOAD ZONE ===== */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(79,142,247,0.05);
+    }
+    .upload-zone .icon { font-size: 2.5rem; margin-bottom: 8px; }
+    .upload-zone p { color: var(--text-muted); font-size: 0.9rem; }
+    #file-input { display: none; }
+
+    /* ===== FORMS ===== */
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group label { font-size: 0.82rem; color: var(--text-muted); }
+    input, select, textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    select option { background: var(--surface2); }
+
+    /* ===== BUTTONS ===== */
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: #3a7de0; }
+    .btn-success { background: var(--success); color: #0f2d1e; }
+    .btn-success:hover { background: #2dba87; }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { border-color: var(--accent); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ===== LOADING ===== */
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== TEAM BUILDER ===== */
+    .team-display {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin: 16px 0;
+    }
+    .team-slot {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+      min-height: 100px;
+    }
+    .team-slot .slot-num { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; }
+    .team-slot .slot-name { font-weight: 600; font-size: 0.9rem; }
+    .team-slot .slot-role { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+    .team-slot.filled { border-color: var(--success); }
+
+    /* ===== RECOMMENDATIONS ===== */
+    .recommendation {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 12px;
+    }
+    .recommendation h3 { color: var(--accent2); margin-bottom: 12px; font-size: 1rem; }
+    .recommendation .strategy { font-size: 0.9rem; line-height: 1.7; color: var(--text-muted); white-space: pre-wrap; }
+    .rec-team { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+    .rec-pokemon {
+      background: rgba(79,142,247,0.15);
+      border: 1px solid rgba(79,142,247,0.3);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+    }
+
+    /* ===== CHAT ===== */
+    .chat-messages {
+      height: 420px;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: var(--surface2);
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+    .message {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+    .message.user {
+      background: var(--accent);
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+    .message.assistant {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+    .message.assistant .thinking {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-style: italic;
+      margin-bottom: 6px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .chat-input-row { display: flex; gap: 10px; }
+    .chat-input-row textarea { flex: 1; resize: none; height: 52px; }
+
+    /* ===== ANALYSIS STATUS ===== */
+    .analysis-result {
+      background: rgba(52,211,153,0.08);
+      border: 1px solid rgba(52,211,153,0.3);
+      border-radius: 10px;
+      padding: 16px;
+      margin-top: 12px;
+      font-size: 0.88rem;
+      white-space: pre-wrap;
+    }
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: rgba(79,142,247,0.1);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 16px;
+    }
+
+    /* ===== MISC ===== */
+    .section-title {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-muted);
+    }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 10px; }
+    .flex-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .mt-12 { margin-top: 12px; }
+    .mt-16 { margin-top: 16px; }
+    .full-width { width: 100%; }
+    .nature-good { color: var(--success); }
+    .nature-bad { color: var(--danger); }
+    hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+    img.preview { max-width: 100%; max-height: 300px; border-radius: 8px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="moon">🌙</span>
+  <h1>ポケモンスリープ アドバイザー</h1>
+</header>
+
+<nav>
+  <button class="active" onclick="switchTab('box')">📦 マイボックス</button>
+  <button onclick="switchTab('builder')">🏆 チームビルダー</button>
+  <button onclick="switchTab('advisor')">💬 アドバイザー</button>
+</nav>
+
+<!-- ==================== TAB: BOX ==================== -->
+<div id="tab-box" class="tab-content active">
+
+  <!-- Upload -->
+  <div class="card">
+    <h2>📸 スクリーンショットで追加</h2>
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+      <div class="icon">📷</div>
+      <p>ポケモンのスクリーンショットをアップロード</p>
+      <p style="margin-top:6px;font-size:0.8rem;">クリック or ドラッグ＆ドロップ</p>
+    </div>
+    <input type="file" id="file-input" accept="image/*" multiple>
+    <img id="preview-img" class="preview" style="display:none">
+    <div class="flex-row mt-12">
+      <button class="btn btn-primary" id="analyze-btn" onclick="analyzeScreenshot()" disabled>
+        <span id="analyze-spinner" style="display:none" class="spinner"></span>
+        🔍 Claudeで解析
+      </button>
+      <span id="analyze-status" style="font-size:0.85rem;color:var(--text-muted)"></span>
+    </div>
+    <div id="analysis-result" style="display:none" class="analysis-result"></div>
+  </div>
+
+  <!-- Manual add -->
+  <div class="card">
+    <h2>✏️ 手動で追加</h2>
+    <div class="form-grid" id="manual-form">
+      <div class="form-group">
+        <label>ポケモン名</label>
+        <input type="text" id="m-name" placeholder="例: Snorlax" list="pokemon-list">
+        <datalist id="pokemon-list"></datalist>
+      </div>
+      <div class="form-group">
+        <label>レベル</label>
+        <input type="number" id="m-level" min="1" max="100" value="1">
+      </div>
+      <div class="form-group">
+        <label>とくせい（タイプ）</label>
+        <select id="m-specialty">
+          <option value="berry">きのみ</option>
+          <option value="ingredient">食材</option>
+          <option value="skill">スキル</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>せいかく</label>
+        <select id="m-nature" id="m-nature">
+          <option value="">選択...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>メインスキル</label>
+        <select id="m-skill">
+          <option value="">選択...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>きのみ</label>
+        <input type="text" id="m-berry" placeholder="例: Oran Berry">
+      </div>
+    </div>
+    <div class="form-group mt-12">
+      <label>サブスキル（カンマ区切り）</label>
+      <input type="text" id="m-subskills" placeholder="例: お手伝いスピードアップS, きのみのかたまりS">
+    </div>
+    <div class="form-group mt-12">
+      <label>メモ</label>
+      <input type="text" id="m-note" placeholder="任意メモ">
+    </div>
+    <button class="btn btn-success mt-12" onclick="addPokemonManually()">➕ 追加</button>
+  </div>
+
+  <!-- Pokemon box display -->
+  <div class="card">
+    <div class="flex-row" style="justify-content:space-between; margin-bottom:16px">
+      <h2 style="margin-bottom:0">📦 マイボックス <span id="box-count" style="color:var(--text-muted);font-size:0.9rem"></span></h2>
+      <button class="btn btn-secondary" onclick="clearBox()">🗑 全削除</button>
+    </div>
+    <div id="box-grid" class="box-grid">
+      <div class="empty-state" style="grid-column:1/-1">
+        <div class="icon">😴</div>
+        <p>まだポケモンがいません</p>
+        <p style="font-size:0.85rem;margin-top:6px">スクリーンショットを解析するか手動で追加してください</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== TAB: BUILDER ==================== -->
+<div id="tab-builder" class="tab-content">
+
+  <div class="card">
+    <h2>🎯 チーム構築設定</h2>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>調査フィールド</label>
+        <select id="b-area">
+          <option value="">選択してください</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>目標</label>
+        <select id="b-goal">
+          <option value="strength">ゆめのかけら最大化</option>
+          <option value="ingredients">食材収集最大化</option>
+          <option value="cooking">料理効率最大化</option>
+          <option value="weekly_event">週間イベント対応</option>
+          <option value="balanced">バランス重視</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>睡眠スタイル</label>
+        <select id="b-style">
+          <option value="dozing">うとうと（8時間未満）</option>
+          <option value="snoozing" selected>すやすや（8〜9時間）</option>
+          <option value="slumbering">ぐっすり（9時間以上）</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group mt-12">
+      <label>現在のイベント / 追加情報（任意）</label>
+      <input type="text" id="b-event" placeholder="例: 月イベント「ピカチュウ」開催中">
+    </div>
+    <div class="flex-row mt-12">
+      <button class="btn btn-primary" id="recommend-btn" onclick="getRecommendations()">
+        <span id="recommend-spinner" style="display:none" class="spinner"></span>
+        ✨ チームを提案してもらう
+      </button>
+      <button class="btn btn-secondary" onclick="searchCurrentEvents()">
+        <span id="event-spinner" style="display:none" class="spinner"></span>
+        🔍 最新イベントを検索
+      </button>
+    </div>
+  </div>
+
+  <div id="recommendations-area"></div>
+</div>
+
+<!-- ==================== TAB: ADVISOR ==================== -->
+<div id="tab-advisor" class="tab-content">
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border)">
+      <h2 style="margin:0">💬 アドバイザーとチャット</h2>
+      <p style="font-size:0.82rem;color:var(--text-muted);margin-top:4px">
+        ポケモンスリープに関することなら何でも聞いてください。マイボックスの情報を参照しながら回答します。
+      </p>
+    </div>
+    <div style="padding:16px">
+      <div id="chat-messages" class="chat-messages">
+        <div class="message assistant">
+          こんにちは！ポケモンスリープのアドバイザーです🌙<br><br>
+          マイボックスにポケモンを登録すれば、あなたのポケモンに合わせた具体的なアドバイスができます。<br>
+          チームの組み方、育成の優先度、イベントへの対応など、何でも聞いてください！
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <textarea id="chat-input" placeholder="メッセージを入力... (Shift+Enterで改行、Enterで送信)" onkeydown="handleChatKey(event)"></textarea>
+        <button class="btn btn-primary" id="chat-btn" onclick="sendChat()" style="height:52px;padding:0 16px">
+          <span id="chat-spinner" style="display:none" class="spinner"></span>
+          送信
+        </button>
+      </div>
+      <button class="btn btn-secondary mt-12" style="font-size:0.8rem" onclick="clearChat()">🗑 会話をリセット</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let myBox = JSON.parse(localStorage.getItem('pokemon_box') || '[]');
+let chatHistory = [];
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadGameData();
+  renderBox();
+  setupUploadZone();
+});
+
+let gameData = { areas: {}, skills: {}, natures: {} };
+
+async function loadGameData() {
+  try {
+    const res = await fetch('/api/game-data');
+    gameData = await res.json();
+    populateSelects();
+  } catch (e) {
+    console.error('Failed to load game data', e);
+  }
+}
+
+function populateSelects() {
+  // Areas
+  const areaSelect = document.getElementById('b-area');
+  Object.entries(gameData.areas || {}).forEach(([k, v]) => {
+    areaSelect.innerHTML += `<option value="${k}">${v.name}</option>`;
+  });
+
+  // Skills
+  const skillSelect = document.getElementById('m-skill');
+  skillSelect.innerHTML = '<option value="">選択...</option>';
+  Object.entries(gameData.skills || {}).forEach(([k, v]) => {
+    skillSelect.innerHTML += `<option value="${k}">${v.name}</option>`;
+  });
+
+  // Natures
+  const natureSelect = document.getElementById('m-nature');
+  natureSelect.innerHTML = '<option value="">選択...</option>';
+  Object.entries(gameData.natures || {}).forEach(([k, v]) => {
+    natureSelect.innerHTML += `<option value="${k}">${v.name}</option>`;
+  });
+
+  // Pokemon datalist
+  const dl = document.getElementById('pokemon-list');
+  (gameData.pokemon_list || []).forEach(p => {
+    dl.innerHTML += `<option value="${p}">`;
+  });
+}
+
+// ============================================================
+// TAB NAVIGATION
+// ============================================================
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ============================================================
+// UPLOAD & SCREENSHOT ANALYSIS
+// ============================================================
+let selectedFile = null;
+
+function setupUploadZone() {
+  const zone = document.getElementById('upload-zone');
+  const fileInput = document.getElementById('file-input');
+
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length) handleFileSelect(files[0]);
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) handleFileSelect(fileInput.files[0]);
+  });
+}
+
+function handleFileSelect(file) {
+  selectedFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('preview-img');
+    img.src = e.target.result;
+    img.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+  document.getElementById('analyze-btn').disabled = false;
+  document.getElementById('analyze-status').textContent = `選択: ${file.name}`;
+}
+
+async function analyzeScreenshot() {
+  if (!selectedFile) return;
+
+  const btn = document.getElementById('analyze-btn');
+  const spinner = document.getElementById('analyze-spinner');
+  const status = document.getElementById('analyze-status');
+  const resultDiv = document.getElementById('analysis-result');
+
+  btn.disabled = true;
+  spinner.style.display = 'inline-block';
+  status.textContent = 'Claudeが解析中...';
+  resultDiv.style.display = 'none';
+
+  try {
+    const formData = new FormData();
+    formData.append('image', selectedFile);
+
+    const res = await fetch('/api/analyze-screenshot', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (data.error) {
+      status.textContent = '❌ エラー: ' + data.error;
+      return;
+    }
+
+    // Add analyzed pokemon to box
+    if (data.pokemon && data.pokemon.length > 0) {
+      data.pokemon.forEach(p => addToBox(p));
+      status.textContent = `✅ ${data.pokemon.length}匹のポケモンを追加しました`;
+      resultDiv.style.display = 'block';
+      resultDiv.textContent = data.analysis_text || '';
+    } else {
+      status.textContent = '⚠️ ポケモンが検出されませんでした';
+      resultDiv.style.display = 'block';
+      resultDiv.textContent = data.analysis_text || '解析結果なし';
+    }
+
+  } catch (e) {
+    status.textContent = '❌ 通信エラー';
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+  }
+}
+
+// ============================================================
+// MY BOX
+// ============================================================
+function addToBox(pokemon) {
+  // Avoid exact duplicates by name+level
+  const exists = myBox.find(p => p.name === pokemon.name && p.level === pokemon.level);
+  if (!exists) {
+    pokemon.id = Date.now() + Math.random();
+    myBox.push(pokemon);
+    saveBox();
+    renderBox();
+  }
+}
+
+function addPokemonManually() {
+  const name = document.getElementById('m-name').value.trim();
+  if (!name) { alert('ポケモン名を入力してください'); return; }
+
+  const p = {
+    id: Date.now(),
+    name,
+    level: parseInt(document.getElementById('m-level').value) || 1,
+    specialty: document.getElementById('m-specialty').value,
+    nature: document.getElementById('m-nature').value,
+    main_skill: document.getElementById('m-skill').value,
+    berry: document.getElementById('m-berry').value,
+    subskills: document.getElementById('m-subskills').value.split(',').map(s => s.trim()).filter(Boolean),
+    note: document.getElementById('m-note').value,
+  };
+
+  addToBox(p);
+
+  // Clear form
+  ['m-name','m-berry','m-subskills','m-note'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('m-level').value = 1;
+}
+
+function removeFromBox(id) {
+  myBox = myBox.filter(p => p.id !== id);
+  saveBox();
+  renderBox();
+}
+
+function saveBox() {
+  localStorage.setItem('pokemon_box', JSON.stringify(myBox));
+}
+
+function clearBox() {
+  if (!confirm('ボックスを全削除しますか？')) return;
+  myBox = [];
+  saveBox();
+  renderBox();
+}
+
+function renderBox() {
+  const grid = document.getElementById('box-grid');
+  const count = document.getElementById('box-count');
+  count.textContent = `(${myBox.length}匹)`;
+
+  if (myBox.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1">
+        <div class="icon">😴</div>
+        <p>まだポケモンがいません</p>
+        <p style="font-size:0.85rem;margin-top:6px">スクリーンショットを解析するか手動で追加してください</p>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = myBox.map(p => {
+    const specialtyLabel = { berry: 'きのみ', ingredient: '食材', skill: 'スキル' }[p.specialty] || p.specialty || '?';
+    const badgeClass = { berry: 'badge-berry', ingredient: 'badge-ingredient', skill: 'badge-skill' }[p.specialty] || 'badge-skill';
+    const subskillsText = p.subskills && p.subskills.length > 0 ? p.subskills.slice(0,2).join(', ') : '';
+    const skillName = p.main_skill ? (gameData.skills?.[p.main_skill]?.name || p.main_skill) : '';
+    const natureName = p.nature ? (gameData.natures?.[p.nature]?.name || p.nature) : '';
+
+    return `
+    <div class="pokemon-card" id="card-${p.id}">
+      <button class="delete-btn" onclick="removeFromBox(${p.id})" title="削除">✕</button>
+      <div class="name">${escHtml(p.name)}</div>
+      <div class="meta">
+        <span class="badge badge-lvl">Lv.${p.level || '?'}</span>
+        <span class="badge ${badgeClass}">${specialtyLabel}</span>
+        ${natureName ? `<span class="badge" style="background:rgba(255,255,255,0.08);color:var(--text-muted)">${escHtml(natureName)}</span>` : ''}
+      </div>
+      ${skillName ? `<div class="skill-name">🎯 ${escHtml(skillName)}</div>` : ''}
+      ${p.berry ? `<div class="skill-name">🫐 ${escHtml(p.berry)}</div>` : ''}
+      ${subskillsText ? `<div class="subskills">✦ ${escHtml(subskillsText)}${p.subskills.length > 2 ? '...' : ''}</div>` : ''}
+      ${p.note ? `<div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;font-style:italic">${escHtml(p.note)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// TEAM BUILDER
+// ============================================================
+async function searchCurrentEvents() {
+  const btn = document.querySelector('[onclick="searchCurrentEvents()"]');
+  const spinner = document.getElementById('event-spinner');
+  spinner.style.display = 'inline-block';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/search-events', { method: 'POST' });
+    const data = await res.json();
+    if (data.events) {
+      document.getElementById('b-event').value = data.events;
+    }
+  } catch(e) {
+    alert('イベント情報の取得に失敗しました');
+  } finally {
+    spinner.style.display = 'none';
+    btn.disabled = false;
+  }
+}
+
+async function getRecommendations() {
+  if (myBox.length === 0) {
+    alert('まずマイボックスにポケモンを追加してください');
+    return;
+  }
+
+  const area = document.getElementById('b-area').value;
+  const goal = document.getElementById('b-goal').value;
+  const style = document.getElementById('b-style').value;
+  const event = document.getElementById('b-event').value;
+
+  const btn = document.getElementById('recommend-btn');
+  const spinner = document.getElementById('recommend-spinner');
+  btn.disabled = true;
+  spinner.style.display = 'inline-block';
+
+  const area_text = document.getElementById('b-area').options[document.getElementById('b-area').selectedIndex]?.text || area;
+
+  try {
+    const res = await fetch('/api/recommend-team', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pokemon_box: myBox, area, area_text, goal, style, event, game_data: gameData }),
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      document.getElementById('recommendations-area').innerHTML =
+        `<div class="card" style="color:var(--danger)">${escHtml(data.error)}</div>`;
+      return;
+    }
+
+    renderRecommendations(data);
+  } catch (e) {
+    document.getElementById('recommendations-area').innerHTML =
+      `<div class="card" style="color:var(--danger)">通信エラーが発生しました</div>`;
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+  }
+}
+
+function renderRecommendations(data) {
+  const area = document.getElementById('recommendations-area');
+  let html = '';
+
+  if (data.recommendations) {
+    data.recommendations.forEach((rec, i) => {
+      const teamHtml = (rec.team || []).map(p =>
+        `<div class="rec-pokemon">
+          <strong>${escHtml(p.name)}</strong>
+          ${p.role ? `<span style="color:var(--text-muted);font-size:0.75rem"> (${escHtml(p.role)})</span>` : ''}
+        </div>`
+      ).join('');
+
+      html += `
+      <div class="recommendation">
+        <h3>${i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'} 案${i + 1}: ${escHtml(rec.title || `チーム構成${i+1}`)}</h3>
+        ${teamHtml ? `<div class="rec-team">${teamHtml}</div>` : ''}
+        <div class="strategy">${escHtml(rec.strategy || '')}</div>
+      </div>`;
+    });
+  }
+
+  if (data.general_advice) {
+    html += `<div class="card"><h2>💡 全体アドバイス</h2><div class="strategy">${escHtml(data.general_advice)}</div></div>`;
+  }
+
+  area.innerHTML = html || '<div class="card">提案を生成できませんでした</div>';
+}
+
+// ============================================================
+// ADVISOR CHAT
+// ============================================================
+function handleChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChat();
+  }
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const message = input.value.trim();
+  if (!message) return;
+
+  input.value = '';
+  appendMessage('user', message);
+  chatHistory.push({ role: 'user', content: message });
+
+  const btn = document.getElementById('chat-btn');
+  const spinner = document.getElementById('chat-spinner');
+  btn.disabled = true;
+  spinner.style.display = 'inline-block';
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        history: chatHistory,
+        pokemon_box: myBox,
+        game_data: gameData,
+      }),
+    });
+    const data = await res.json();
+
+    if (data.response) {
+      appendMessage('assistant', data.response);
+      chatHistory.push({ role: 'assistant', content: data.response });
+    } else if (data.error) {
+      appendMessage('assistant', '❌ エラー: ' + data.error);
+    }
+  } catch(e) {
+    appendMessage('assistant', '❌ 通信エラーが発生しました');
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+  }
+}
+
+function appendMessage(role, text) {
+  const container = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `message ${role}`;
+  div.textContent = text;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function clearChat() {
+  chatHistory = [];
+  const container = document.getElementById('chat-messages');
+  container.innerHTML = `
+    <div class="message assistant">
+      こんにちは！ポケモンスリープのアドバイザーです🌙<br><br>
+      マイボックスにポケモンを登録すれば、あなたのポケモンに合わせた具体的なアドバイスができます。<br>
+      チームの組み方、育成の優先度、イベントへの対応など、何でも聞いてください！
+    </div>`;
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function escHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>
