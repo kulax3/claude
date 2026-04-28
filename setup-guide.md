@@ -71,50 +71,115 @@ cp agents/*.md ~/.claude/agents/
 
 ## Phase 3: リモートアクセス環境の構築（外出先から操作するために）
 
-### Step 8: PCのスリープを無効化（常時起動）
+### Step 8: このリポジトリをローカルに取り込む
 
-**macOS の場合:**
+まずローカルPCでターミナルを開き、以下を実行する。
+
 ```bash
-# スリープ無効化（電源接続時）
-sudo pmset -c sleep 0 disksleep 0
+# すでにcloneしてある場合
+cd ~/claude
+git fetch origin claude/setup-dev-config-KYQd0
+git checkout claude/setup-dev-config-KYQd0
+git pull origin claude/setup-dev-config-KYQd0
 
-# 確認
-pmset -g | grep sleep
+# まだcloneしていない場合
+git clone https://github.com/kulax3/claude.git ~/claude
+cd ~/claude
+git checkout claude/setup-dev-config-KYQd0
 ```
 
-システム設定 → バッテリー → 「電源アダプタ接続時はディスプレイをオフにしない」もチェック。
+### Step 9: PCのスリープを完全に無効化する（常時起動）
+
+外出先から接続するためにPCを常時起動状態にしておく。
+
+**macOS の場合:**
+
+```bash
+# ① スリープ・ディスクスリープを無効化（電源接続時）
+sudo pmset -c sleep 0 disksleep 0 hibernatemode 0
+
+# ② 設定が反映されたか確認（sleep の値がすべて 0 になっていればOK）
+pmset -g | grep -E "sleep|hibernate"
+```
+
+次にGUIからも設定する:
+1. システム設定 → バッテリー（またはエネルギー）を開く
+2. 「電源アダプタ」タブ → 「ディスプレイをオフにするまでの時間」を「しない」に設定
+3. 「ハードディスクが可能な場合はスリープさせる」のチェックを外す
 
 **Windows の場合:**
-- 設定 → システム → 電源とスリープ → すべて「なし」に設定
 
-### Step 9: リモートコントロールを設定
+1. スタートメニュー → 設定 → システム → 電源とスリープ を開く
+2. 「スリープ」の項目を「なし」に変更
+3. 「画面をオフにする」も「なし」に変更
 
-Claude Codeセッションを起動したまま以下を実行：
+### Step 10: エージェントテンプレートをコピーする
+
+このリポジトリに用意済みのエージェントをClaude Codeのホームに配置する。
+
+```bash
+# エージェント用ディレクトリを作成
+mkdir -p ~/.claude/agents/
+
+# テンプレートをコピー
+cp ~/claude/agents/*.md ~/.claude/agents/
+
+# コピーされたか確認
+ls ~/.claude/agents/
+```
+
+### Step 11: Claude Codeを起動してリモートコントロールを有効化する
+
+```bash
+# ① Opusモデル + Effort High で起動
+claude --model opus --effort high
+```
+
+起動したら、Claude Codeのチャット内で以下を実行:
 
 ```
 /remote-control
 ```
 
-→ QRコードが表示されるのでスマホで読み込む  
-→ セッションを切らなければずっとスマホから操作できる
+2. QRコードが表示される
+3. スマホのカメラアプリまたはQRコードリーダーで読み込む
+4. スマホのブラウザでClaude Codeの画面が開けば接続成功
 
-**使い分け:**
+> セッションを閉じると接続が切れるため、**PCのターミナルはそのまま開いておく**。
+> `claude --resume` で再接続した場合は `/remote-control` を再度実行する。
+
+**使い分け（外出先での運用）:**
+
 | ツール | 用途 |
 |--------|------|
 | リモートコントロール | 承認作業・細かい操作の確認 |
-| Discord MCP | タスクの依頼・一般的なやり取り |
+| Discord MCP | タスクの依頼・ファイルの送信 |
 
-### Step 10: Discord MCPを接続
+### Step 12: Discord MCPを接続する
 
-スマホから画像・動画をアップロードしてそのまま処理を依頼できるようになる。
+スマホから画像・動画をDiscordにアップロードするだけで、Claude Codeに処理を依頼できるようになる。
+
+**① Discordサーバーとボットを準備する:**
+
+1. Discord公式サイト（discord.com）でアカウント作成・ログイン
+2. 新しいサーバーを作成（個人用で問題ない）
+3. Discord Developer Portal（discord.com/developers）でアプリケーションを作成
+4. 「Bot」メニューでボットを作成 → トークンをコピーして控えておく
+5. 「OAuth2 → URL Generator」でボットをサーバーに招待
+
+**② Claude CodeにDiscord MCPを追加する:**
 
 ```bash
-# Discord MCPをインストール
 claude mcp add discord
 ```
 
-詳細な設定手順はこちら（Claude Codeに「Discord MCPを設定して」と依頼すれば自動で進められる）:
-https://github.com/anthropics/claude-plugins-official/blob/main/external_plugins/discord/README.md
+プロンプトに従いボットトークンとチャンネルIDを入力する。
+
+**③ 動作確認:**
+
+Discordのサーバーに「テスト」と送信してClaude Codeが反応すれば完了。
+
+詳細手順はClaude Codeに「Discord MCPを設定して」と依頼すれば自動で進められる。
 
 ---
 
