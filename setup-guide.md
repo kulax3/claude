@@ -4,6 +4,72 @@ Claude Codeを本格活用するための10の準備。**上から順に実行**
 
 ---
 
+## ★ まずここから：ローカルに戻ったら最初に実行する手順
+
+### 1. ターミナルを開く
+
+- **macOS**: Spotlight（Cmd + Space）→ 「ターミナル」と入力して Enter
+- **Windows**: Win キー → 「Windows Terminal」または「PowerShell」と入力して Enter
+
+### 2. リポジトリのディレクトリに移動する
+
+```bash
+cd ~/claude
+```
+
+> `~/claude` が存在しない場合は次の「3a」に進む。存在する場合は「3b」へ。
+
+### 3a. リポジトリをまだcloneしていない場合
+
+```bash
+# ホームディレクトリにclone
+git clone https://github.com/kulax3/claude.git ~/claude
+
+# cloneしたディレクトリに移動
+cd ~/claude
+
+# 作業ブランチに切り替え
+git checkout claude/setup-dev-config-KYQd0
+```
+
+### 3b. すでにcloneしてある場合（通常はこちら）
+
+```bash
+# リモートの最新情報を取得
+git fetch origin
+
+# 作業ブランチに切り替え（すでにいる場合はスキップ）
+git checkout claude/setup-dev-config-KYQd0
+
+# 最新の変更をローカルに反映
+git pull origin claude/setup-dev-config-KYQd0
+```
+
+### 4. ファイルが正しく取得できたか確認する
+
+```bash
+# 以下のファイルが存在すればOK
+ls setup-guide.md CLAUDE.md agents/
+```
+
+表示例：
+```
+CLAUDE.md  agents/  setup-guide.md
+```
+
+### 5. Phase 3（遠隔操作環境）のセットアップに進む
+
+```bash
+# このファイルを開いて Step 8 から読み進める
+open setup-guide.md        # macOS
+# または
+cat setup-guide.md         # どのOSでもターミナルで読める
+```
+
+→ 以降は下の **Phase 3: Step 8〜12** を上から順に実行してください。
+
+---
+
 ## Phase 1: 基本セットアップ（まず最初に）
 
 ### Step 1: ターミナル最適化
