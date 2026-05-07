@@ -41,6 +41,65 @@
       background-clip: text;
     }
     header .moon { font-size: 1.8rem; }
+    header .spacer { flex: 1; }
+    .ollama-indicator {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.8rem; color: var(--text-muted);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 12px;
+      cursor: pointer;
+    }
+    .ollama-indicator .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--danger);
+      flex-shrink: 0;
+    }
+    .ollama-indicator.ok .dot { background: var(--success); }
+    /* Ollama setup modal */
+    .modal-bg {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7); z-index: 100;
+      align-items: center; justify-content: center;
+    }
+    .modal-bg.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      max-width: 520px; width: 90%;
+      position: relative;
+    }
+    .modal h2 { margin-bottom: 16px; color: var(--accent2); }
+    .modal pre {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 0.85rem;
+      color: var(--success);
+      margin: 8px 0 16px;
+      overflow-x: auto;
+    }
+    .modal .close-btn {
+      position: absolute; top: 14px; right: 16px;
+      background: none; border: none;
+      color: var(--text-muted); cursor: pointer; font-size: 1.2rem;
+    }
+    .model-row {
+      display: flex; gap: 10px; align-items: center;
+      margin: 6px 0;
+    }
+    .model-row label { font-size: 0.85rem; color: var(--text-muted); width: 80px; }
+    .model-row select { flex: 1; }
+    .step {
+      border-left: 3px solid var(--accent);
+      padding-left: 12px;
+      margin-bottom: 14px;
+    }
+    .step p { font-size: 0.88rem; color: var(--text-muted); margin-bottom: 4px; }
     nav {
       display: flex;
       gap: 0;
@@ -320,7 +379,59 @@
 <header>
   <span class="moon">🌙</span>
   <h1>ポケモンスリープ アドバイザー</h1>
+  <div class="spacer"></div>
+  <div class="ollama-indicator" id="ollama-indicator" onclick="openOllamaModal()" title="Ollama設定">
+    <div class="dot"></div>
+    <span id="ollama-label">Ollama 確認中...</span>
+  </div>
 </header>
+
+<!-- Ollama Setup Modal -->
+<div class="modal-bg" id="ollama-modal">
+  <div class="modal">
+    <button class="close-btn" onclick="closeOllamaModal()">✕</button>
+    <h2>⚙️ Ollama 設定</h2>
+
+    <div id="ollama-setup-guide" style="display:none">
+      <div class="step">
+        <p><strong>① Ollamaをインストール</strong></p>
+        <pre>https://ollama.com からダウンロード</pre>
+      </div>
+      <div class="step">
+        <p><strong>② モデルをダウンロード（どちらか）</strong></p>
+        <pre># テキスト用 (2GB)
+ollama pull llama3.2
+
+# 画像解析用 (4.7GB)
+ollama pull llava
+
+# ※ 1つで両方対応 (8GB)
+ollama pull llama3.2-vision</pre>
+      </div>
+      <div class="step">
+        <p><strong>③ Ollamaを起動</strong></p>
+        <pre>ollama serve</pre>
+      </div>
+      <p style="font-size:0.82rem;color:var(--text-muted)">起動後、このページをリロードしてください。</p>
+    </div>
+
+    <div id="ollama-model-config">
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:14px">使用するモデルを選択してください。</p>
+      <div class="model-row">
+        <label>テキスト用</label>
+        <select id="sel-text-model"></select>
+      </div>
+      <div class="model-row">
+        <label>画像解析用</label>
+        <select id="sel-vision-model"></select>
+      </div>
+      <p style="font-size:0.78rem;color:var(--text-muted);margin-top:8px">
+        ※ 画像解析には llava / llava:13b / moondream / llama3.2-vision が必要です
+      </p>
+      <button class="btn btn-primary mt-12" onclick="saveModelSettings()">💾 保存</button>
+    </div>
+  </div>
+</div>
 
 <nav>
   <button class="active" onclick="switchTab('box')">📦 マイボックス</button>
@@ -509,6 +620,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadGameData();
   renderBox();
   setupUploadZone();
+  checkOllama();
 });
 
 let gameData = { areas: {}, skills: {}, natures: {} };
@@ -613,6 +725,7 @@ async function analyzeScreenshot() {
   try {
     const formData = new FormData();
     formData.append('image', selectedFile);
+    formData.append('model', localStorage.getItem('vision_model') || 'llava');
 
     const res = await fetch('/api/analyze-screenshot', { method: 'POST', body: formData });
     const data = await res.json();
@@ -780,7 +893,7 @@ async function getRecommendations() {
     const res = await fetch('/api/recommend-team', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pokemon_box: myBox, area, area_text, goal, style, event, game_data: gameData }),
+      body: JSON.stringify({ pokemon_box: myBox, area, area_text, goal, style, event, game_data: gameData, model: localStorage.getItem('text_model') || 'llama3.2' }),
     });
     const data = await res.json();
 
@@ -861,6 +974,7 @@ async function sendChat() {
         history: chatHistory,
         pokemon_box: myBox,
         game_data: gameData,
+        model: localStorage.getItem('text_model') || 'llama3.2',
       }),
     });
     const data = await res.json();
@@ -898,6 +1012,91 @@ function clearChat() {
       チームの組み方、育成の優先度、イベントへの対応など、何でも聞いてください！
     </div>`;
 }
+
+// ============================================================
+// OLLAMA STATUS & MODEL SETTINGS
+// ============================================================
+let ollamaModels = [];
+
+async function checkOllama() {
+  try {
+    const res = await fetch('/api/ollama-status');
+    const data = await res.json();
+    const indicator = document.getElementById('ollama-indicator');
+    const label = document.getElementById('ollama-label');
+    ollamaModels = data.models || [];
+
+    if (data.running && ollamaModels.length > 0) {
+      indicator.classList.add('ok');
+      label.textContent = `Ollama ✓ (${ollamaModels.length}モデル)`;
+    } else if (data.running) {
+      label.textContent = 'Ollama起動中・モデルなし';
+    } else {
+      label.textContent = 'Ollama 未起動 →設定';
+    }
+
+    // Populate model selects
+    populateModelSelects(ollamaModels, data.text_model, data.vision_model);
+  } catch(e) {
+    document.getElementById('ollama-label').textContent = 'Ollama 未接続';
+  }
+}
+
+function populateModelSelects(models, defaultText, defaultVision) {
+  const textSel = document.getElementById('sel-text-model');
+  const visionSel = document.getElementById('sel-vision-model');
+  const savedText = localStorage.getItem('text_model') || defaultText;
+  const savedVision = localStorage.getItem('vision_model') || defaultVision;
+
+  [textSel, visionSel].forEach(sel => { sel.innerHTML = ''; });
+
+  if (models.length === 0) {
+    [textSel, visionSel].forEach(sel => {
+      sel.innerHTML = '<option value="">モデルなし</option>';
+    });
+    return;
+  }
+
+  models.forEach(m => {
+    textSel.innerHTML += `<option value="${m}" ${m === savedText ? 'selected' : ''}>${m}</option>`;
+    visionSel.innerHTML += `<option value="${m}" ${m === savedVision ? 'selected' : ''}>${m}</option>`;
+  });
+}
+
+function openOllamaModal() {
+  const modal = document.getElementById('ollama-modal');
+  const guide = document.getElementById('ollama-setup-guide');
+  const config = document.getElementById('ollama-model-config');
+
+  if (ollamaModels.length === 0) {
+    guide.style.display = 'block';
+    config.style.display = 'none';
+  } else {
+    guide.style.display = 'none';
+    config.style.display = 'block';
+  }
+  modal.classList.add('open');
+}
+
+function closeOllamaModal() {
+  document.getElementById('ollama-modal').classList.remove('open');
+}
+
+function saveModelSettings() {
+  const textModel = document.getElementById('sel-text-model').value;
+  const visionModel = document.getElementById('sel-vision-model').value;
+  if (textModel) localStorage.setItem('text_model', textModel);
+  if (visionModel) localStorage.setItem('vision_model', visionModel);
+  closeOllamaModal();
+  checkOllama();
+}
+
+// Close modal on background click
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('ollama-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeOllamaModal();
+  });
+});
 
 // ============================================================
 // UTILS
